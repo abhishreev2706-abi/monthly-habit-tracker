@@ -342,7 +342,7 @@ let pieChart = null;
 let barChart = null;
 
 // Render rows for an array of { label, amount } items
-function buildFinanceRows(containerId, addBtnId, arr, onChange) {
+function buildFinanceRows(containerId, addBtnId, arr, onChange, defaultCount = 0) {
   const wrap = document.getElementById(containerId);
   wrap.innerHTML = '';
 
@@ -362,7 +362,7 @@ function buildFinanceRows(containerId, addBtnId, arr, onChange) {
     amt.value = item.amount ?? '';
     amt.addEventListener('input', () => { item.amount = amt.value; onChange(); saveState(); });
 
-    // Delete button (hide if only 1 row left)
+    // Delete button — hide for default rows
     const del = document.createElement('button');
     del.className = 'btn-del'; del.textContent = '✕'; del.title = 'Remove';
     del.addEventListener('click', () => {
@@ -371,6 +371,7 @@ function buildFinanceRows(containerId, addBtnId, arr, onChange) {
       buildFinanceRows(containerId, addBtnId, arr, onChange);
       onChange();
     });
+    if (idx < defaultCount) del.style.visibility = 'hidden';
 
     row.appendChild(lbl);
     row.appendChild(amt);
@@ -470,8 +471,8 @@ function updateFinanceCharts(income, expense, expArr) {
 
 function renderFinance() {
   const md = monthData();
-  buildFinanceRows('incomeRows',  'addIncomeBtn',  md.income,   updateFinanceSummary);
-  buildFinanceRows('expenseRows', 'addExpenseBtn', md.expenses, updateFinanceSummary);
+  buildFinanceRows('incomeRows',  'addIncomeBtn',  md.income,   updateFinanceSummary, 1);
+  buildFinanceRows('expenseRows', 'addExpenseBtn', md.expenses, updateFinanceSummary, 2);
   updateFinanceSummary();
 }
 
