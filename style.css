@@ -63,16 +63,16 @@ body {
 
 .header-top {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  justify-content: space-between;
+  gap: 14px;
 }
 
 .header-brand {
   display: flex;
   align-items: center;
   gap: 10px;
+  justify-content: center;
 }
 
 .logo { font-size: 1.6rem; }
@@ -89,6 +89,7 @@ h1 {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  justify-content: center;
 }
 
 .quote {
@@ -128,7 +129,8 @@ select:focus, input[type="text"]:focus { border-color: var(--accent); }
 .btn-primary  { background: var(--accent);    color: #fff; }
 .btn-danger   { background: var(--danger);    color: #fff; }
 .btn-secondary{ background: var(--secondary); color: #fff; }
-.btn-icon     { background: var(--border);    color: var(--text); font-size: 1rem; padding: 8px 10px; }
+.btn-today { background: #f0fdf4; color: var(--success); border: 1.5px solid var(--success); }
+.btn-today:hover { background: var(--success); color: #fff; opacity: 1; }
 
 /* ── SECTION TITLES ── */
 .section-title {
@@ -212,6 +214,9 @@ td:first-child {
   text-align: left;
   padding: 0 8px;
   border-right: 2px solid var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* Editable habit name */
@@ -228,36 +233,78 @@ td:first-child {
 }
 .habit-name:focus { border-bottom: 1.5px solid var(--accent); }
 
-/* Inline confirmation bar inside habit row */
-.habit-confirm {
+/* ── CONFIRM MODAL ── */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  background: var(--danger-light);
-  border-top: 1px solid color-mix(in srgb, var(--danger) 20%, transparent);
-  font-size: .78rem;
-  font-weight: 600;
-  color: var(--danger);
-  animation: slideDown .15s ease;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn .15s ease;
 }
-.habit-confirm span { flex: 1; }
-.habit-confirm button {
-  padding: 3px 10px;
+
+.confirm-box {
+  background: var(--card);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+  padding: 28px 32px;
+  min-width: 300px;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+  animation: popIn .15s ease;
+}
+
+.confirm-box p {
+  font-size: .95rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.confirm-box .confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.confirm-box .confirm-yes {
+  padding: 8px 24px;
+  background: var(--danger);
+  color: #fff;
   border: none;
-  border-radius: 6px;
-  font-size: .75rem;
+  border-radius: 8px;
+  font-size: .875rem;
   font-weight: 700;
   cursor: pointer;
   transition: opacity .15s;
 }
-.habit-confirm .confirm-yes { background: var(--danger); color: #fff; }
-.habit-confirm .confirm-no  { background: var(--border);  color: var(--text); }
-.habit-confirm button:hover { opacity: .82; }
 
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-4px); }
-  to   { opacity: 1; transform: translateY(0); }
+.confirm-box .confirm-no {
+  padding: 8px 24px;
+  background: var(--border);
+  color: var(--text);
+  border: none;
+  border-radius: 8px;
+  font-size: .875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+
+.confirm-box button:hover { opacity: .82; }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(.92); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
 /* Day cell toggle */

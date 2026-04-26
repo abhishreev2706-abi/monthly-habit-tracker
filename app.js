@@ -104,26 +104,70 @@ function onMonthChange() {
   saveState();
 }
 
+// ── CONFIRM MODAL ────────────────────────────────────────────
+function showInlineConfirm(tr, message, onYes, onNo) {
+  // Remove any existing confirm row
+  const next = tr.nextSibling;
+  if (next && next.classList && next.classList.contains('confirm-row')) next.remove();
+
+  // Build centered overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'confirm-overlay';
+
+  const box = document.createElement('div');
+  box.className = 'confirm-box';
+
+  const msg = document.createElement('p');
+  msg.textContent = message;
+
+  const actions = document.createElement('div');
+  actions.className = 'confirm-actions';
+
+  const yes = document.createElement('button');
+  yes.className = 'confirm-yes'; yes.textContent = 'Yes';
+  yes.addEventListener('click', () => { overlay.remove(); onYes(); });
+
+  const no = document.createElement('button');
+  no.className = 'confirm-no'; no.textContent = 'No';
+  no.addEventListener('click', () => { overlay.remove(); if (onNo) onNo(); });
+
+  // Close on backdrop click
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) { overlay.remove(); if (onNo) onNo(); }
+  });
+
+  actions.appendChild(yes);
+  actions.appendChild(no);
+  box.appendChild(msg);
+  box.appendChild(actions);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
 // ── HABIT TABLE ───────────────────────────────────────────────
 function addHabit() {
   state.habits.push('New Habit');
   saveState();
   renderTable();
-  // Focus the new habit name input
   const inputs = document.querySelectorAll('.habit-name');
   if (inputs.length) inputs[inputs.length - 1].focus();
 }
 
-function deleteHabit(hIdx) {
-  if (!confirm(`Delete "${state.habits[hIdx]}"? This will remove all its tracked data.`)) return;
-  Object.values(state.data).forEach(md => {
-    Object.keys(md.checks).forEach(k => {
-      if (k.startsWith(`${hIdx}-`)) delete md.checks[k];
-    });
-  });
-  state.habits.splice(hIdx, 1);
-  saveState();
-  renderTable();
+function deleteHabit(hIdx, tr) {
+  showInlineConfirm(
+    tr,
+    `Delete "${state.habits[hIdx]}"? All tracked data will be removed.`,
+    () => {
+      Object.values(state.data).forEach(md => {
+        Object.keys(md.checks).forEach(k => {
+          if (k.startsWith(`${hIdx}-`)) delete md.checks[k];
+        });
+      });
+      state.habits.splice(hIdx, 1);
+      saveState();
+      renderTable();
+    }
+  );
 }
 
 function renderTable() {
@@ -141,28 +185,23 @@ function renderTable() {
 
     // Habit name + delete button
     const nameTd = document.createElement('td');
-    nameTd.style.display = 'flex';
-    nameTd.style.alignItems = 'center';
-    nameTd.style.gap = '4px';
     const input  = document.createElement('input');
     input.className = 'habit-name';
     input.value = habit;
-    const originalName = habit;
     input.addEventListener('focus', () => { input.dataset.before = input.value; });
     input.addEventListener('change', () => {
       const newName = input.value.trim();
       if (!newName || newName === input.dataset.before) { input.value = input.dataset.before; return; }
-      if (!confirm(`Rename "${input.dataset.before}" to "${newName}"?`)) {
-        input.value = input.dataset.before;
-        return;
-      }
-      state.habits[hIdx] = newName;
-      saveState();
-      updateSummary();
+      showInlineConfirm(
+        tr,
+        `Rename "${input.dataset.before}" to "${newName}"?`,
+        () => { state.habits[hIdx] = newName; saveState(); updateSummary(); },
+        () => { input.value = input.dataset.before; }
+      );
     });
     const del = document.createElement('button');
     del.className = 'btn-del habit-del'; del.textContent = '✕'; del.title = 'Remove habit';
-    del.addEventListener('click', () => deleteHabit(hIdx));
+    del.addEventListener('click', () => deleteHabit(hIdx, tr));
     nameTd.appendChild(input);
     nameTd.appendChild(del);
     tr.appendChild(nameTd);
@@ -480,6 +519,20 @@ function init() {
     const btn = document.getElementById('saveBtn');
     btn.textContent = '✅ Saved!';
     setTimeout(() => { btn.textContent = '💾 Save'; }, 1500);
+  });
+
+  document.getElementById('todayBtn').addEventListener('click', () => {
+    const now = new Date();
+    state.month = now.getMonth();
+    state.year  = now.getFullYear();
+    document.getElementById('monthSelect').value = state.month;
+    document.getElementById('yearSelect').value  = state.year;
+    onMonthChange();
+    // Scroll today's column into view
+    setTimeout(() => {
+      const todayCell = document.querySelector('.day-cell.today');
+      if (todayCell) todayCell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }, 100);
   });
 
   document.getElementById('resetBtn').addEventListener('click', resetMonth);
