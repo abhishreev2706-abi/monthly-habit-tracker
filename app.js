@@ -3,8 +3,7 @@
 // ── DEFAULT DATA ──────────────────────────────────────────────
 const DEFAULT_HABITS = [
   'Wake up early', '50 Pushups', '5 Liters Water', 'Exercise',
-  'No Alcohol', '2 Hr Guitar', 'Reading', 'No Smoking',
-  'Sleep Early', 'Meditation'
+  'Reading', 'Sleep Early', 'Meditation'
 ];
 
 const MONTHS = [
@@ -12,28 +11,37 @@ const MONTHS = [
   'July','August','September','October','November','December'
 ];
 
+// Dynamic colors cycling for pie chart
+const CHART_COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#f43f5e','#a855f7'];
+
 // ── STATE ─────────────────────────────────────────────────────
 let state = {
-  month: new Date().getMonth(),   // 0-indexed
-  year:  new Date().getFullYear(),
-  name:  '',
+  month:  new Date().getMonth(),
+  year:   new Date().getFullYear(),
+  name:   '',
   habits: [...DEFAULT_HABITS],
   dark:   false,
-  // Per-month data keyed by "YYYY-MM"
-  // Each entry: { checks: {}, sleep: {}, notes: '' }
-  data: {}
+  data:   {}  // keyed by "YYYY-MM", each: { checks, sleep, notes, income, expenses }
 };
 
-// Returns key like "2025-06" for current selected month
 function monthKey() {
   return `${state.year}-${String(state.month + 1).padStart(2, '0')}`;
 }
 
-// Returns the data bucket for the current month, creating it if missing
 function monthData() {
   const k = monthKey();
-  if (!state.data[k]) state.data[k] = { checks: {}, sleep: {}, notes: '' };
-  return state.data[k];
+  if (!state.data[k]) state.data[k] = {
+    checks: {}, sleep: {}, notes: '',
+    income:   [ { label: 'Salary',    amount: '' } ],
+    expenses: [ { label: 'Food',      amount: '' },
+                { label: 'Transport', amount: '' } ]
+  };
+  // migrate older flat-object buckets to array format
+  const d = state.data[k];
+  if (!Array.isArray(d.income))   d.income   = [ { label: 'Salary',    amount: '' } ];
+  if (!Array.isArray(d.expenses)) d.expenses = [ { label: 'Food',      amount: '' },
+                                                  { label: 'Transport', amount: '' } ];
+  return d;
 }
 
 // ── STORAGE ───────────────────────────────────────────────────
@@ -45,9 +53,7 @@ function saveState() {
 
 function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw) {
-    try { Object.assign(state, JSON.parse(raw)); } catch(e) {}
-  }
+  if (raw) { try { Object.assign(state, JSON.parse(raw)); } catch(e) {} }
 }
 
 // ── HELPERS ───────────────────────────────────────────────────
@@ -57,16 +63,11 @@ function daysInMonth(month, year) {
 
 function checkKey(hIdx, day) { return `${hIdx}-${day}`; }
 
-
-// Returns 'today' | 'past' | 'future' | 'other-month'
 function dayStatus(day) {
   const now = new Date();
-  const todayY = now.getFullYear();
-  const todayM = now.getMonth();
-  const todayD = now.getDate();
-  if (state.year !== todayY || state.month !== todayM) return 'other-month';
-  if (day === todayD) return 'today';
-  if (day < todayD)  return 'past';
+  if (state.year !== now.getFullYear() || state.month !== now.getMonth()) return 'other-month';
+  if (day === now.getDate()) return 'today';
+  if (day < now.getDate())  return 'past';
   return 'future';
 }
 
@@ -97,59 +98,92 @@ function initSelects() {
 function onMonthChange() {
   renderTable();
   renderSleepInputs();
-  updateChart();
+  updateSleepChart();
   refreshNotes();
+  renderFinance();
   saveState();
 }
 
 // ── HABIT TABLE ───────────────────────────────────────────────
+function addHabit() {
+  state.habits.push('New Habit');
+  saveState();
+  renderTable();
+  // Focus the new habit name input
+  const inputs = document.querySelectorAll('.habit-name');
+  if (inputs.length) inputs[inputs.length - 1].focus();
+}
+
+function deleteHabit(hIdx) {
+  if (!confirm(`Delete "${state.habits[hIdx]}"? This will remove all its tracked data.`)) return;
+  Object.values(state.data).forEach(md => {
+    Object.keys(md.checks).forEach(k => {
+      if (k.startsWith(`${hIdx}-`)) delete md.checks[k];
+    });
+  });
+  state.habits.splice(hIdx, 1);
+  saveState();
+  renderTable();
+}
+
 function renderTable() {
-  const days = daysInMonth(state.month, state.year);
+  const days      = daysInMonth(state.month, state.year);
   const headerRow = document.getElementById('headerRow');
   const body      = document.getElementById('habitBody');
 
-  // Header
   headerRow.innerHTML = '<th>Habit</th>';
-  for (let d = 1; d <= days; d++) {
-    headerRow.innerHTML += `<th>${d}</th>`;
-  }
+  for (let d = 1; d <= days; d++) headerRow.innerHTML += `<th>${d}</th>`;
   headerRow.innerHTML += '<th>Progress</th>';
 
-  // Body
   body.innerHTML = '';
   state.habits.forEach((habit, hIdx) => {
     const tr = document.createElement('tr');
 
-    // Habit name cell (editable)
+    // Habit name + delete button
     const nameTd = document.createElement('td');
+    nameTd.style.display = 'flex';
+    nameTd.style.alignItems = 'center';
+    nameTd.style.gap = '4px';
     const input  = document.createElement('input');
     input.className = 'habit-name';
     input.value = habit;
+    const originalName = habit;
+    input.addEventListener('focus', () => { input.dataset.before = input.value; });
     input.addEventListener('change', () => {
-      state.habits[hIdx] = input.value;
+      const newName = input.value.trim();
+      if (!newName || newName === input.dataset.before) { input.value = input.dataset.before; return; }
+      if (!confirm(`Rename "${input.dataset.before}" to "${newName}"?`)) {
+        input.value = input.dataset.before;
+        return;
+      }
+      state.habits[hIdx] = newName;
       saveState();
       updateSummary();
     });
+    const del = document.createElement('button');
+    del.className = 'btn-del habit-del'; del.textContent = '✕'; del.title = 'Remove habit';
+    del.addEventListener('click', () => deleteHabit(hIdx));
     nameTd.appendChild(input);
+    nameTd.appendChild(del);
     tr.appendChild(nameTd);
 
     // Day cells
     let doneCount = 0;
     for (let d = 1; d <= days; d++) {
-      const td  = document.createElement('td');
-      const key = checkKey(hIdx, d);
-      const md  = monthData();
-      const div = document.createElement('div');
-      const status  = dayStatus(d);
+      const td     = document.createElement('td');
+      const key    = checkKey(hIdx, d);
+      const md     = monthData();
+      const div    = document.createElement('div');
+      const status = dayStatus(d);
       const isToday = status === 'today';
       const locked  = !isToday;
 
-      let cellClass = 'day-cell';
-      if (md.checks[key]) cellClass += ' done';
-      if (isToday) cellClass += ' today';
-      if (locked)  cellClass += ' locked';
+      let cls = 'day-cell';
+      if (md.checks[key]) cls += ' done';
+      if (isToday) cls += ' today';
+      if (locked)  cls += ' locked';
 
-      div.className   = cellClass;
+      div.className   = cls;
       div.textContent = md.checks[key] ? '✓' : '';
       div.title       = locked ? (status === 'past' ? 'Past day — locked' : 'Future day — locked') : 'Click to toggle';
 
@@ -168,36 +202,33 @@ function renderTable() {
       tr.appendChild(td);
     }
 
-    // Progress cell
+    // Progress
     const pct = Math.round((doneCount / days) * 100);
     const ptd = document.createElement('td');
     ptd.className = 'progress-cell';
     ptd.id = `prog-${hIdx}`;
-    ptd.innerHTML = `
-      <div>${pct}%</div>
-      <div class="progress-bar-wrap">
-        <div class="progress-bar-fill" style="width:${pct}%"></div>
-      </div>`;
+    ptd.innerHTML = `<div>${pct}%</div><div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%"></div></div>`;
     tr.appendChild(ptd);
 
     body.appendChild(tr);
   });
 
   updateSummary();
+
+  // Wire add button (re-clone to avoid duplicate listeners)
+  const addBtn = document.getElementById('addHabitBtn');
+  const newBtn = addBtn.cloneNode(true);
+  addBtn.parentNode.replaceChild(newBtn, addBtn);
+  newBtn.addEventListener('click', addHabit);
 }
 
 function updateProgress(hIdx, days) {
   const checks = monthData().checks;
-  const done = Object.keys(checks)
-    .filter(k => k.startsWith(`${hIdx}-`) && checks[k]).length;
-  const pct = Math.round((done / days) * 100);
-  const cell = document.getElementById(`prog-${hIdx}`);
+  const done   = Object.keys(checks).filter(k => k.startsWith(`${hIdx}-`) && checks[k]).length;
+  const pct    = Math.round((done / days) * 100);
+  const cell   = document.getElementById(`prog-${hIdx}`);
   if (!cell) return;
-  cell.innerHTML = `
-    <div>${pct}%</div>
-    <div class="progress-bar-wrap">
-      <div class="progress-bar-fill" style="width:${pct}%"></div>
-    </div>`;
+  cell.innerHTML = `<div>${pct}%</div><div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%"></div></div>`;
 }
 
 function updateSummary() {
@@ -205,8 +236,7 @@ function updateSummary() {
   const total = state.habits.length * days;
   const done  = Object.values(monthData().checks).filter(Boolean).length;
   const pct   = total ? Math.round((done / total) * 100) : 0;
-  const badge = document.getElementById('summaryBadge');
-  badge.textContent = `${pct}% monthly completion (${done}/${total})`;
+  document.getElementById('summaryBadge').textContent = `${pct}% monthly completion (${done}/${total})`;
 }
 
 // ── SLEEP TRACKER ─────────────────────────────────────────────
@@ -218,75 +248,40 @@ function renderSleepInputs() {
   wrap.innerHTML = '';
 
   for (let d = 1; d <= days; d++) {
-    const div   = document.createElement('div');
+    const div = document.createElement('div');
     div.className = 'sleep-day';
     const label = document.createElement('label');
     label.textContent = d;
-    const inp   = document.createElement('input');
-    inp.type  = 'number';
-    inp.min   = 0; inp.max = 24; inp.step = .5;
+    const inp = document.createElement('input');
+    inp.type = 'number'; inp.min = 0; inp.max = 24; inp.step = .5;
     inp.value = monthData().sleep[d] ?? '';
     inp.placeholder = '—';
-    inp.addEventListener('input', () => {
-      monthData().sleep[d] = inp.value;
-      saveState();
-      updateChart();
-    });
+    inp.addEventListener('input', () => { monthData().sleep[d] = inp.value; saveState(); updateSleepChart(); });
     div.appendChild(label);
     div.appendChild(inp);
     wrap.appendChild(div);
   }
 }
 
-function updateChart() {
-  const days   = daysInMonth(state.month, state.year);
-  const labels = Array.from({length: days}, (_, i) => i + 1);
-  const data   = labels.map(d => parseFloat(monthData().sleep[d]) || null);
-
-  const ctx = document.getElementById('sleepChart').getContext('2d');
-
-  if (sleepChart) sleepChart.destroy();
-
-  const isDark = state.dark;
+function updateSleepChart() {
+  const days      = daysInMonth(state.month, state.year);
+  const labels    = Array.from({length: days}, (_, i) => i + 1);
+  const data      = labels.map(d => parseFloat(monthData().sleep[d]) || null);
+  const ctx       = document.getElementById('sleepChart').getContext('2d');
+  const isDark    = state.dark;
   const gridColor = isDark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.06)';
   const textColor = isDark ? '#94a3b8' : '#6b7280';
 
+  if (sleepChart) sleepChart.destroy();
   sleepChart = new Chart(ctx, {
     type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Hours Slept',
-        data,
-        borderColor: '#6366f1',
-        backgroundColor: 'rgba(99,102,241,.12)',
-        borderWidth: 2.5,
-        pointBackgroundColor: '#6366f1',
-        pointRadius: 4,
-        pointHoverRadius: 6,
-        tension: .4,
-        fill: true,
-        spanGaps: true
-      }]
-    },
+    data: { labels, datasets: [{ label: 'Hours Slept', data, borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,.12)', borderWidth: 2.5, pointBackgroundColor: '#6366f1', pointRadius: 4, pointHoverRadius: 6, tension: .4, fill: true, spanGaps: true }] },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { labels: { color: textColor, font: { size: 12 } } },
-        tooltip: { mode: 'index', intersect: false }
-      },
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: textColor, font: { size: 12 } } }, tooltip: { mode: 'index', intersect: false } },
       scales: {
-        x: {
-          ticks: { color: textColor, maxTicksLimit: 16 },
-          grid:  { color: gridColor }
-        },
-        y: {
-          min: 0, max: 12,
-          ticks: { color: textColor, stepSize: 2 },
-          grid:  { color: gridColor },
-          title: { display: true, text: 'Hours', color: textColor }
-        }
+        x: { ticks: { color: textColor, maxTicksLimit: 16 }, grid: { color: gridColor } },
+        y: { min: 0, max: 12, ticks: { color: textColor, stepSize: 2 }, grid: { color: gridColor }, title: { display: true, text: 'Hours', color: textColor } }
       }
     }
   });
@@ -296,46 +291,178 @@ function updateChart() {
 function initNotes() {
   const ta = document.getElementById('notesArea');
   ta.value = monthData().notes;
-  ta.addEventListener('input', () => {
-    monthData().notes = ta.value;
+  ta.addEventListener('input', () => { monthData().notes = ta.value; saveState(); });
+}
+
+function refreshNotes() {
+  document.getElementById('notesArea').value = monthData().notes;
+}
+
+// ── FINANCE TRACKER ───────────────────────────────────────────
+let pieChart = null;
+let barChart = null;
+
+// Render rows for an array of { label, amount } items
+function buildFinanceRows(containerId, addBtnId, arr, onChange) {
+  const wrap = document.getElementById(containerId);
+  wrap.innerHTML = '';
+
+  arr.forEach((item, idx) => {
+    const row = document.createElement('div');
+    row.className = 'finance-row';
+
+    // Editable label
+    const lbl = document.createElement('input');
+    lbl.type = 'text'; lbl.className = 'finance-label-input';
+    lbl.value = item.label; lbl.placeholder = 'Category name';
+    lbl.addEventListener('input', () => { item.label = lbl.value; onChange(); saveState(); });
+
+    // Amount
+    const amt = document.createElement('input');
+    amt.type = 'number'; amt.min = 0; amt.step = 1; amt.placeholder = '0';
+    amt.value = item.amount ?? '';
+    amt.addEventListener('input', () => { item.amount = amt.value; onChange(); saveState(); });
+
+    // Delete button (hide if only 1 row left)
+    const del = document.createElement('button');
+    del.className = 'btn-del'; del.textContent = '✕'; del.title = 'Remove';
+    del.addEventListener('click', () => {
+      arr.splice(idx, 1);
+      saveState();
+      buildFinanceRows(containerId, addBtnId, arr, onChange);
+      onChange();
+    });
+
+    row.appendChild(lbl);
+    row.appendChild(amt);
+    row.appendChild(del);
+    wrap.appendChild(row);
+  });
+
+  // Wire the Add button
+  const addBtn = document.getElementById(addBtnId);
+  // Clone to remove old listeners
+  const newBtn = addBtn.cloneNode(true);
+  addBtn.parentNode.replaceChild(newBtn, addBtn);
+  newBtn.addEventListener('click', () => {
+    arr.push({ label: '', amount: '' });
     saveState();
+    buildFinanceRows(containerId, addBtnId, arr, onChange);
+    // Focus the new label input
+    const inputs = document.querySelectorAll(`#${containerId} .finance-label-input`);
+    if (inputs.length) inputs[inputs.length - 1].focus();
   });
 }
 
-// Reload notes textarea when month changes
-function refreshNotes() {
-  document.getElementById('notesArea').value = monthData().notes;
+function sumArr(arr) {
+  return arr.reduce((s, item) => s + (parseFloat(item.amount) || 0), 0);
+}
+
+function fmt(n) {
+  return '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function updateFinanceSummary() {
+  const md      = monthData();
+  const income  = sumArr(md.income);
+  const expense = sumArr(md.expenses);
+  const balance = income - expense;
+  const savings = income > 0 ? Math.round((balance / income) * 100) : 0;
+
+  document.getElementById('incomeTotal').textContent  = 'Total: ' + fmt(income);
+  document.getElementById('expenseTotal').textContent = 'Total: ' + fmt(expense);
+  document.getElementById('finIncome').textContent    = fmt(income);
+  document.getElementById('finExpense').textContent   = fmt(expense);
+  document.getElementById('finBalance').textContent   = fmt(balance);
+  document.getElementById('finSavings').textContent   = savings + '%';
+  document.getElementById('financeBadge').textContent = `Balance: ${fmt(balance)}`;
+
+  updateFinanceCharts(income, expense, md.expenses);
+}
+
+function updateFinanceCharts(income, expense, expArr) {
+  const isDark    = state.dark;
+  const textColor = isDark ? '#94a3b8' : '#6b7280';
+  const gridColor = isDark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.06)';
+  const borderCol = isDark ? '#1e293b' : '#fff';
+
+  const pieLabels = expArr.map(i => i.label || 'Unnamed');
+  const pieData   = expArr.map(i => parseFloat(i.amount) || 0);
+  const pieColors = expArr.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]);
+
+  if (pieChart) pieChart.destroy();
+  pieChart = new Chart(document.getElementById('expensePieChart').getContext('2d'), {
+    type: 'doughnut',
+    data: { labels: pieLabels, datasets: [{ data: pieData, backgroundColor: pieColors, borderWidth: 2, borderColor: borderCol }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: textColor, font: { size: 11 }, padding: 10 } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.parsed)}` } }
+      }
+    }
+  });
+
+  if (barChart) barChart.destroy();
+  barChart = new Chart(document.getElementById('incomeBarChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: ['Income', 'Expenses', 'Balance'],
+      datasets: [{
+        label: 'Amount (₹)',
+        data: [income, expense, income - expense],
+        backgroundColor: ['rgba(16,185,129,.75)', 'rgba(239,68,68,.75)', 'rgba(99,102,241,.75)'],
+        borderRadius: 8, borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${fmt(ctx.parsed.y)}` } }
+      },
+      scales: {
+        x: { ticks: { color: textColor }, grid: { color: gridColor } },
+        y: { ticks: { color: textColor }, grid: { color: gridColor }, title: { display: true, text: 'Amount (₹)', color: textColor } }
+      }
+    }
+  });
+}
+
+function renderFinance() {
+  const md = monthData();
+  buildFinanceRows('incomeRows',  'addIncomeBtn',  md.income,   updateFinanceSummary);
+  buildFinanceRows('expenseRows', 'addExpenseBtn', md.expenses, updateFinanceSummary);
+  updateFinanceSummary();
 }
 
 // ── DARK MODE ─────────────────────────────────────────────────
 function applyDark() {
   document.body.classList.toggle('dark', state.dark);
   document.getElementById('darkToggle').textContent = state.dark ? '☀️' : '🌙';
-  if (sleepChart) updateChart(); // re-render with correct colors
+  if (sleepChart) updateSleepChart();
 }
 
 // ── RESET ─────────────────────────────────────────────────────
 function resetMonth() {
   if (!confirm(`Reset all data for ${MONTHS[state.month]} ${state.year}?`)) return;
-  // Clear only the current month's data
-  state.data[monthKey()] = { checks: {}, sleep: {}, notes: '' };
+  state.data[monthKey()] = {
+    checks: {}, sleep: {}, notes: '',
+    income:   [ { label: 'Salary',    amount: '' } ],
+    expenses: [ { label: 'Food',      amount: '' },
+                { label: 'Transport', amount: '' } ]
+  };
   saveState();
   renderTable();
   renderSleepInputs();
-  updateChart();
+  updateSleepChart();
+  refreshNotes();
+  renderFinance();
 }
 
 // ── PDF EXPORT ────────────────────────────────────────────────
 function exportPDF() {
-  const el  = document.getElementById('app');
-  const opt = {
-    margin:    [8, 8],
-    filename:  `HabitTracker-${MONTHS[state.month]}-${state.year}.pdf`,
-    image:     { type: 'jpeg', quality: .95 },
-    html2canvas: { scale: 1.5, useCORS: true },
-    jsPDF:     { unit: 'mm', format: 'a3', orientation: 'landscape' }
-  };
-  html2pdf().set(opt).from(el).save();
+  window.print();
 }
 
 // ── BOOTSTRAP ─────────────────────────────────────────────────
@@ -343,12 +470,10 @@ function init() {
   loadState();
   initSelects();
 
-  // Name input
   const nameInput = document.getElementById('nameInput');
   nameInput.value = state.name;
   nameInput.addEventListener('input', () => { state.name = nameInput.value; });
 
-  // Buttons
   document.getElementById('saveBtn').addEventListener('click', () => {
     state.name = nameInput.value;
     saveState();
@@ -362,14 +487,16 @@ function init() {
   document.getElementById('darkToggle').addEventListener('click', () => {
     state.dark = !state.dark;
     applyDark();
+    renderFinance();
     saveState();
   });
 
   applyDark();
   renderTable();
   renderSleepInputs();
-  updateChart();
+  updateSleepChart();
   initNotes();
+  renderFinance();
 }
 
 document.addEventListener('DOMContentLoaded', init);

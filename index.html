@@ -7,8 +7,6 @@
   <link rel="stylesheet" href="style.css" />
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- html2pdf for export -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
   <div class="app" id="app">
@@ -47,6 +45,7 @@
           <tbody id="habitBody"></tbody>
         </table>
       </div>
+      <button id="addHabitBtn" class="btn-add-row" style="margin-top:12px">+ Add Habit</button>
     </section>
 
     <!-- ── SLEEP TRACKER ── -->
@@ -62,6 +61,52 @@
     <section class="card" id="notesSection">
       <h2 class="section-title">Notes</h2>
       <textarea id="notesArea" placeholder="Write your notes, reflections, goals…"></textarea>
+    </section>
+
+    <!-- ── FINANCE TRACKER ── -->
+    <section class="card" id="financeSection">
+      <div class="section-title">
+        <h2>💰 Expense, Spend &amp; Gain Tracker</h2>
+        <span id="financeBadge" class="summary-badge finance-badge"></span>
+      </div>
+
+      <div class="finance-grid">
+        <!-- Income -->
+        <div class="finance-group">
+          <h3 class="finance-group-title income-title">💵 Income</h3>
+          <div class="finance-rows" id="incomeRows"></div>
+          <button id="addIncomeBtn" class="btn-add-row">+ Add Income</button>
+          <div class="finance-total" id="incomeTotal">Total: ₹0</div>
+        </div>
+
+        <!-- Expenses -->
+        <div class="finance-group">
+          <h3 class="finance-group-title expense-title">💸 Expenses</h3>
+          <div class="finance-rows" id="expenseRows"></div>
+          <button id="addExpenseBtn" class="btn-add-row">+ Add Expense</button>
+          <div class="finance-total" id="expenseTotal">Total: ₹0</div>
+        </div>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="finance-summary" id="financeSummary">
+        <div class="fin-card income-card"><div class="fin-label">Total Income</div><div class="fin-value" id="finIncome">₹0</div></div>
+        <div class="fin-card expense-card"><div class="fin-label">Total Expenses</div><div class="fin-value" id="finExpense">₹0</div></div>
+        <div class="fin-card balance-card"><div class="fin-label">Remaining Balance</div><div class="fin-value" id="finBalance">₹0</div></div>
+        <div class="fin-card savings-card"><div class="fin-label">Savings Rate</div><div class="fin-value" id="finSavings">0%</div></div>
+      </div>
+
+      <!-- Charts -->
+      <div class="finance-charts">
+        <div class="chart-box">
+          <h4>Expense Breakdown</h4>
+          <div class="chart-container"><canvas id="expensePieChart"></canvas></div>
+        </div>
+        <div class="chart-box">
+          <h4>Income vs Expenses</h4>
+          <div class="chart-container"><canvas id="incomeBarChart"></canvas></div>
+        </div>
+      </div>
     </section>
 
   </div>

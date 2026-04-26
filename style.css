@@ -228,6 +228,38 @@ td:first-child {
 }
 .habit-name:focus { border-bottom: 1.5px solid var(--accent); }
 
+/* Inline confirmation bar inside habit row */
+.habit-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--danger-light);
+  border-top: 1px solid color-mix(in srgb, var(--danger) 20%, transparent);
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--danger);
+  animation: slideDown .15s ease;
+}
+.habit-confirm span { flex: 1; }
+.habit-confirm button {
+  padding: 3px 10px;
+  border: none;
+  border-radius: 6px;
+  font-size: .75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.habit-confirm .confirm-yes { background: var(--danger); color: #fff; }
+.habit-confirm .confirm-no  { background: var(--border);  color: var(--text); }
+.habit-confirm button:hover { opacity: .82; }
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* Day cell toggle */
 .day-cell {
   width: 100%;
@@ -336,6 +368,178 @@ td:first-child {
 }
 #notesArea:focus { border-color: var(--accent); }
 
+/* ── FINANCE TRACKER ── */
+:root {
+  --income:  #10b981;
+  --expense: #ef4444;
+  --balance: #6366f1;
+  --savings: #f59e0b;
+}
+
+.finance-badge { background: #fef3c7; color: #92400e; }
+
+.finance-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+@media (max-width: 640px) { .finance-grid { grid-template-columns: 1fr; } }
+
+.finance-group {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+}
+
+.finance-group-title {
+  font-size: .9rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border);
+}
+.income-title  { color: var(--income); border-color: var(--income); }
+.expense-title { color: var(--expense); border-color: var(--expense); }
+
+.finance-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.finance-row label {
+  flex: 1;
+  font-size: .82rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Editable category label inside finance row */
+.finance-label-input {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text);
+  font-size: .82rem;
+  font-weight: 600;
+  outline: none;
+  transition: border-color .2s;
+  min-width: 0;
+}
+.finance-label-input:focus { border-color: var(--accent); }
+
+/* Delete row button */
+.btn-del {
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: .85rem;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: background .15s;
+  flex-shrink: 0;
+}
+.btn-del:hover { background: var(--danger-light); }
+
+/* Add row button */
+.btn-add-row {
+  margin-top: 8px;
+  width: 100%;
+  padding: 7px;
+  border: 1.5px dashed var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .2s, color .2s;
+}
+.btn-add-row:hover { border-color: var(--accent); color: var(--accent); }
+
+.finance-row input {
+  width: 110px;
+  padding: 6px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text);
+  font-size: .85rem;
+  outline: none;
+  text-align: right;
+  transition: border-color .2s;
+}
+.finance-row input:focus { border-color: var(--accent); }
+
+.finance-total {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+  font-size: .85rem;
+  font-weight: 700;
+  text-align: right;
+  color: var(--text-muted);
+}
+
+/* Summary cards */
+.finance-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+@media (max-width: 768px) { .finance-summary { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 400px)  { .finance-summary { grid-template-columns: 1fr; } }
+
+.fin-card {
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  border: 1px solid var(--border);
+}
+.fin-label { font-size: .75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+.fin-value { font-size: 1.2rem; font-weight: 800; }
+
+.income-card  { background: color-mix(in srgb, var(--income)  12%, var(--card)); }
+.expense-card { background: color-mix(in srgb, var(--expense) 12%, var(--card)); }
+.balance-card { background: color-mix(in srgb, var(--balance) 12%, var(--card)); }
+.savings-card { background: color-mix(in srgb, var(--savings) 12%, var(--card)); }
+
+.income-card  .fin-value { color: var(--income); }
+.expense-card .fin-value { color: var(--expense); }
+.balance-card .fin-value { color: var(--balance); }
+.savings-card .fin-value { color: var(--savings); }
+
+/* Finance charts */
+.finance-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+@media (max-width: 640px) { .finance-charts { grid-template-columns: 1fr; } }
+
+.chart-box {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+}
+.chart-box h4 {
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  text-align: center;
+}
+
 /* ── RESPONSIVE ── */
 @media (max-width: 640px) {
   h1 { font-size: 1.1rem; }
@@ -344,4 +548,31 @@ td:first-child {
   .card { padding: 16px; }
   :root { --cell: 32px; }
   th:first-child { min-width: 120px; }
+}
+
+/* ── PRINT / PDF ── */
+@media print {
+  @page { size: A3 landscape; margin: 10mm; }
+
+  body { background: #fff !important; color: #000 !important; }
+
+  /* Hide buttons and controls */
+  .header-controls, #addHabitBtn, .btn-add-row,
+  .btn-del, .habit-del, .habit-confirm { display: none !important; }
+
+  /* Remove shadows and borders for clean print */
+  .card { box-shadow: none !important; border: 1px solid #ddd; margin-bottom: 12px; }
+
+  /* Expand table fully */
+  .table-wrapper { max-height: none !important; overflow: visible !important; }
+
+  /* Keep sticky columns visible */
+  td:first-child, th:first-child { position: static !important; }
+
+  /* Avoid page breaks inside cards */
+  .card { page-break-inside: avoid; }
+
+  /* Charts — fix canvas sizing for print */
+  .chart-container { height: 180px !important; }
+  .finance-charts  { grid-template-columns: 1fr 1fr; }
 }
