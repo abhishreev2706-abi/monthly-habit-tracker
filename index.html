@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monthly Habit Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- html2pdf for export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+  <div class="app" id="app">
+
+    <!-- ── HEADER ── -->
+    <header class="card header-card">
+      <div class="header-top">
+        <div class="header-brand">
+          <span class="logo">📅</span>
+          <h1>Monthly Habit Tracker</h1>
+        </div>
+        <div class="header-controls">
+          <select id="monthSelect"></select>
+          <select id="yearSelect"></select>
+          <input id="nameInput" type="text" placeholder="Your name…" maxlength="40" />
+          <button id="saveBtn" class="btn btn-primary">💾 Save</button>
+          <button id="resetBtn" class="btn btn-danger">🔄 Reset</button>
+          <button id="exportBtn" class="btn btn-secondary">📄 PDF</button>
+          <button id="darkToggle" class="btn btn-icon" title="Toggle dark mode">🌙</button>
+        </div>
+      </div>
+      <p class="quote">"Be consistent — never give up"</p>
+    </header>
+
+    <!-- ── HABIT TABLE ── -->
+    <section class="card" id="habitSection">
+      <div class="section-title">
+        <h2>Habit Tracker</h2>
+        <div id="summaryBadge" class="summary-badge"></div>
+      </div>
+      <div class="table-wrapper">
+        <table id="habitTable">
+          <thead>
+            <tr id="headerRow"></tr>
+          </thead>
+          <tbody id="habitBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── SLEEP TRACKER ── -->
+    <section class="card" id="sleepSection">
+      <h2 class="section-title">Sleep Tracker</h2>
+      <div id="sleepInputs" class="sleep-inputs"></div>
+      <div class="chart-container">
+        <canvas id="sleepChart"></canvas>
+      </div>
+    </section>
+
+    <!-- ── NOTES ── -->
+    <section class="card" id="notesSection">
+      <h2 class="section-title">Notes</h2>
+      <textarea id="notesArea" placeholder="Write your notes, reflections, goals…"></textarea>
+    </section>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
